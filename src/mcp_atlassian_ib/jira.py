@@ -20,11 +20,10 @@ logger = logging.getLogger("mcp-jira")
 class JiraManager:
     """Handles all Jira operations including fetching, creating, and updating issues."""
 
-    # Known custom field mappings
+    # Known custom field mappings - these will be updated during initialization
     CUSTOM_FIELD_MAPPINGS = {
-        'Epic Name': 'customfield_10011',
-        'Epic Link': 'customfield_10014',
-        'Acceptance Criteria': 'customfield_10031',  # This ID might need adjustment
+        'Epic Name': 'customfield_10021',
+        'Epic Link': 'customfield_10019',
     }
 
     def __init__(self):
@@ -51,16 +50,32 @@ class JiraManager:
             fields = self.jira.get_all_fields()
             for field in fields:
                 if field.get('custom'):
+                    # Store both name and id mapping for better lookup
                     self.CUSTOM_FIELD_MAPPINGS[field['name']] = field['id']
-            logger.info(f"Initialized custom field mappings: {self.CUSTOM_FIELD_MAPPINGS}")
+                    # Also store the customfield_XXXXX name as a key
+                    if field['id'].startswith('customfield_'):
+                        self.CUSTOM_FIELD_MAPPINGS[field['id']] = field['id']
+            
+            logger.info("Available custom fields:")
+            for name, field_id in self.CUSTOM_FIELD_MAPPINGS.items():
+                logger.info(f"  {name}: {field_id}")
         except Exception as e:
             logger.error(f"Error initializing custom fields: {str(e)}")
 
     def _get_custom_field_id(self, field_name: str) -> Optional[str]:
-        """Get the custom field ID for a given field name."""
+        """Get the custom field ID for a given field name or ID."""
+        # If the field_name is already a customfield_XXXXX format, verify it exists
+        if field_name.startswith('customfield_'):
+            field_id = self.CUSTOM_FIELD_MAPPINGS.get(field_name)
+            if field_id:
+                return field_id
+            logger.warning(f"Unknown custom field ID: {field_name}")
+            return None
+
+        # Otherwise, look up by name
         field_id = self.CUSTOM_FIELD_MAPPINGS.get(field_name)
         if not field_id:
-            logger.warning(f"Unknown custom field: {field_name}")
+            logger.warning(f"Unknown custom field name: {field_name}")
         return field_id
 
     def _clean_text(self, text: str) -> str:
@@ -127,7 +142,7 @@ Description:
             if custom_fields:
                 content += "Custom Fields:\n"
                 for name, value in custom_fields.items():
-                    if value:
+                    if value and not name.startswith('customfield_'):
                         content += f"{name}: {value}\n"
                 content += "\n"
 
@@ -256,7 +271,7 @@ Description:
             if not current_issue:
                 raise ValueError(f"Issue {request.issue_key} does not exist")
 
-            # Process custom fields in the update
+            # Process fields for update
             fields = {}
             for field_name, value in request.fields.items():
                 # Check if it's a custom field
@@ -264,14 +279,25 @@ Description:
                 if field_id:
                     fields[field_id] = value
                 else:
-                    # Standard field
-                    fields[field_name] = value
+                    # Standard field - convert to lowercase for consistency
+                    fields[field_name.lower()] = value
 
-            # Update the issue
-            self.jira.update_issue_field(
-                request.issue_key,
-                fields=fields
+            # Log the update request for debugging
+            logger.info(f"Updating issue {request.issue_key} with fields: {fields}")
+
+            # Use the REST API directly for better control
+            api_endpoint = f"rest/api/2/issue/{request.issue_key}"
+            payload = {"fields": fields}
+            
+            response = self.jira._session.put(
+                url=self.jira._get_url(api_endpoint),
+                json=payload
             )
+            
+            if response.status_code not in [200, 204]:
+                error_msg = f"Failed to update issue. Status: {response.status_code}, Response: {response.text}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
 
             # Return the updated issue as a Document
             return self.get_issue(request.issue_key)
