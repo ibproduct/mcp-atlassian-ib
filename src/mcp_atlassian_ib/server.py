@@ -9,15 +9,16 @@ from pydantic import AnyUrl
 
 from .confluence import ConfluenceManager
 from .jira import JiraManager
+from .types import ConfluencePageCreate, ConfluencePageUpdate, JiraIssueCreate, JiraIssueUpdate
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("mcp-atlassian")
+logger = logging.getLogger("mcp-atlassian-ib")
 
 # Initialize the managers
 confluence_manager = ConfluenceManager()
 jira_manager = JiraManager()
-app = Server("mcp-atlassian")
+app = Server("mcp-atlassian-ib")
 
 
 @app.list_resources()
