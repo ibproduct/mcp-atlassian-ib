@@ -22,10 +22,9 @@ class JiraManager:
 
     # Known custom field mappings
     CUSTOM_FIELD_MAPPINGS = {
-        'Epic Name': 'customfield_10021',
-        'Epic Link': 'customfield_10019',
-        'Acceptance Criteria': 'customfield_11738',  # Main Acceptance Criteria field
-        'Story Points': 'customfield_10026',
+        'Epic Name': 'customfield_10011',
+        'Epic Link': 'customfield_10014',
+        'Acceptance Criteria': 'customfield_10031',  # This ID might need adjustment
     }
 
     def __init__(self):
@@ -74,17 +73,6 @@ class JiraManager:
             return ""
 
         return self.preprocessor.clean_jira_text(text)
-
-    def _process_custom_fields(self, custom_fields: Dict[str, Any]) -> Dict[str, Any]:
-        """Process custom fields and convert names to IDs."""
-        processed_fields = {}
-        for field_name, value in custom_fields.items():
-            field_id = self._get_custom_field_id(field_name)
-            if field_id:
-                processed_fields[field_id] = value
-            else:
-                logger.warning(f"Skipping unknown custom field: {field_name}")
-        return processed_fields
 
     def get_issue(self, issue_key: str, expand: Optional[str] = None) -> Document:
         """
@@ -245,8 +233,10 @@ Description:
 
             # Handle custom fields
             if request.custom_fields:
-                processed_fields = self._process_custom_fields(request.custom_fields)
-                fields.update(processed_fields)
+                for field_name, value in request.custom_fields.items():
+                    field_id = self._get_custom_field_id(field_name)
+                    if field_id:
+                        fields[field_id] = value
 
             # Create the issue
             issue = self.jira.create_issue(fields=fields)
@@ -266,7 +256,7 @@ Description:
             if not current_issue:
                 raise ValueError(f"Issue {request.issue_key} does not exist")
 
-            # Process fields
+            # Process custom fields in the update
             fields = {}
             for field_name, value in request.fields.items():
                 # Check if it's a custom field
@@ -275,21 +265,13 @@ Description:
                     fields[field_id] = value
                 else:
                     # Standard field
-                    fields[field_name.lower()] = value
+                    fields[field_name] = value
 
-            # Update the issue using the REST API directly for better control
-            api_endpoint = f"rest/api/2/issue/{request.issue_key}"
-            payload = {"fields": fields}
-            
-            response = self.jira._session.put(
-                url=self.jira._get_url(api_endpoint),
-                json=payload
+            # Update the issue
+            self.jira.update_issue_field(
+                request.issue_key,
+                fields=fields
             )
-            
-            if response.status_code not in [200, 204]:
-                error_msg = f"Failed to update issue. Status: {response.status_code}, Response: {response.text}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
 
             # Return the updated issue as a Document
             return self.get_issue(request.issue_key)
