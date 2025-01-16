@@ -129,6 +129,35 @@ If you encounter any issues:
 
 For additional help, please open an issue on the GitHub repository.
 
+### Updating the Integration
+
+To get the latest updates (bug fixes, new features, etc.):
+
+1. Open Terminal (Applications > Utilities > Terminal)
+2. Navigate to your installation directory:
+   ```bash
+   cd ~/Documents/mcp-atlassian-ib
+   ```
+3. Activate the virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+4. Get the latest changes:
+   ```bash
+   # Update your local repository with the latest changes
+   git pull origin main
+
+   # Install any new dependencies
+   pip install -e .
+   ```
+5. Restart the Claude desktop app to apply the changes
+
+Note: If you've made local modifications to any files, you might need to resolve merge conflicts. In this case, it's recommended to:
+1. Back up your local changes
+2. Reset to the original state: `git reset --hard origin/main`
+3. Pull the latest changes: `git pull origin main`
+4. Re-apply your local modifications if needed
+
 ## Features
 
 - Search and read Confluence spaces/pages
