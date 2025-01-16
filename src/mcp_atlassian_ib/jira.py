@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+import urllib.parse
 
 from atlassian import Jira
 from dotenv import load_dotenv
@@ -24,6 +25,7 @@ class JiraManager:
     CUSTOM_FIELD_MAPPINGS = {
         'Epic Name': 'customfield_10021',
         'Epic Link': 'customfield_10019',
+        'Acceptance Criteria': 'customfield_11738',  # Known Acceptance Criteria field
     }
 
     def __init__(self):
@@ -285,19 +287,11 @@ Description:
             # Log the update request for debugging
             logger.info(f"Updating issue {request.issue_key} with fields: {fields}")
 
-            # Use the REST API directly for better control
-            api_endpoint = f"rest/api/2/issue/{request.issue_key}"
-            payload = {"fields": fields}
-            
-            response = self.jira._session.put(
-                url=self.jira._get_url(api_endpoint),
-                json=payload
+            # Use the Jira API's update_issue method
+            self.jira.update_issue_field(
+                request.issue_key,
+                fields
             )
-            
-            if response.status_code not in [200, 204]:
-                error_msg = f"Failed to update issue. Status: {response.status_code}, Response: {response.text}"
-                logger.error(error_msg)
-                raise ValueError(error_msg)
 
             # Return the updated issue as a Document
             return self.get_issue(request.issue_key)
