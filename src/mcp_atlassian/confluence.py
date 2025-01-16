@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from .config import ConfluenceConfig
 from .preprocessing import TextPreprocessor
-from .types import Document
+from .types import ConfluencePageCreate, ConfluencePageUpdate, Document
 
 # Load environment variables
 load_dotenv()
@@ -16,8 +16,8 @@ load_dotenv()
 logger = logging.getLogger("mcp-atlassian")
 
 
-class ConfluenceFetcher:
-    """Handles fetching and parsing content from Confluence."""
+class ConfluenceManager:
+    """Handles all Confluence operations including fetching, creating, and updating content."""
 
     def __init__(self):
         url = os.getenv("CONFLUENCE_URL")
@@ -179,3 +179,64 @@ class ConfluenceFetcher:
         except Exception as e:
             logger.error(f"Search failed with error: {str(e)}")
             return []
+
+    def create_page(self, request: ConfluencePageCreate) -> Document:
+        """Create a new Confluence page."""
+        try:
+            # Validate space exists
+            space = self.confluence.get_space(request.space_key)
+            if not space:
+                raise ValueError(f"Space {request.space_key} does not exist")
+
+            # Convert content to storage format if needed
+            # The atlassian package handles this conversion internally
+
+            # Create the page
+            page = self.confluence.create_page(
+                space=request.space_key,
+                title=request.title,
+                body=request.content,
+                parent_id=request.parent_id,
+                representation="wiki"
+            )
+
+            # Return the created page as a Document
+            return self.get_page_content(page["id"])
+
+        except Exception as e:
+            logger.error(f"Error creating page: {str(e)}")
+            raise
+
+    def update_page(self, request: ConfluencePageUpdate) -> Document:
+        """Update an existing Confluence page."""
+        try:
+            # Get current page to verify version
+            current_page = self.confluence.get_page_by_id(
+                page_id=request.page_id,
+                expand="version"
+            )
+
+            if not current_page:
+                raise ValueError(f"Page {request.page_id} does not exist")
+
+            current_version = current_page["version"]["number"]
+            if current_version != request.version:
+                raise ValueError(
+                    f"Version conflict: current version is {current_version}, "
+                    f"but update requested for version {request.version}"
+                )
+
+            # Update the page
+            page = self.confluence.update_page(
+                page_id=request.page_id,
+                title=request.title,
+                body=request.content,
+                representation="wiki"
+            )
+
+            # Return the updated page as a Document
+            return self.get_page_content(page["id"])
+
+        except Exception as e:
+            logger.error(f"Error updating page: {str(e)}")
+            raise

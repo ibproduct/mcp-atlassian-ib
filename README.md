@@ -1,17 +1,19 @@
-# MCP Atlassian
+# Atlassian MCP server for IntelligenceBank
 
-Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and Jira). This integration is designed specifically for Atlassian Cloud instances and does not support Atlassian Server or Data Center deployments.
+Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and Jira), customized for IntelligenceBank. This integration is designed specifically for Atlassian Cloud instances and does not support Atlassian Server or Data Center deployments.
 
-<a href="https://glama.ai/mcp/servers/kc33m1kh5m"><img width="380" height="200" src="https://glama.ai/mcp/servers/kc33m1kh5m/badge" alt="Atlassian MCP server" /></a>
+This is a fork of the original MCP Atlassian project, enhanced with additional capabilities for IntelligenceBank's specific needs.
 
-## Feature Demo
-![Demo](https://github.com/user-attachments/assets/995d96a8-4cf3-4a03-abe1-a9f6aea27ac0)
+Repository: https://github.com/ibproduct/mcp-atlassian-ib
 
 ## Features
 
 - Search and read Confluence spaces/pages
+- Create and update Confluence pages
 - Get Confluence page comments
 - Search and read Jira issues
+- Create and update Jira issues (Epics and Stories)
+- Custom field support (e.g., Acceptance Criteria)
 - Get project issues and metadata
 
 ## API
@@ -41,6 +43,22 @@ Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and
     - `page_id` (string): Confluence page ID
     - `include_metadata` (boolean, optional): Include page metadata (default: true)
 
+- **confluence_create_page**
+  - Create a new Confluence page
+  - Inputs:
+    - `space_key` (string): Space key where the page will be created
+    - `title` (string): Page title
+    - `content` (string): Page content in wiki markup format
+    - `parent_id` (string, optional): Parent page ID
+
+- **confluence_update_page**
+  - Update an existing Confluence page
+  - Inputs:
+    - `page_id` (string): ID of the page to update
+    - `title` (string): New page title
+    - `content` (string): New page content in wiki markup format
+    - `version` (number): Current page version number
+
 - **confluence_get_comments**
   - Get comments for a specific Confluence page
   - Input: `page_id` (string)
@@ -52,6 +70,29 @@ Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and
   - Inputs:
     - `issue_key` (string): Jira issue key (e.g., 'PROJ-123')
     - `expand` (string, optional): Fields to expand
+
+- **jira_create_epic**
+  - Create a new Jira epic
+  - Inputs:
+    - `project_key` (string): Project key where the epic will be created
+    - `summary` (string): Epic summary/title
+    - `description` (string, optional): Epic description
+    - `custom_fields` (object, optional): Custom fields (e.g., Acceptance Criteria)
+
+- **jira_create_story**
+  - Create a new Jira story
+  - Inputs:
+    - `project_key` (string): Project key where the story will be created
+    - `summary` (string): Story summary/title
+    - `description` (string, optional): Story description
+    - `epic_link` (string, optional): Epic key to link the story to
+    - `custom_fields` (object, optional): Custom fields (e.g., Acceptance Criteria)
+
+- **jira_update_issue**
+  - Update an existing Jira issue
+  - Inputs:
+    - `issue_key` (string): Key of the issue to update
+    - `fields` (object): Fields to update, including custom fields
 
 - **jira_search**
   - Search Jira issues using JQL
@@ -66,16 +107,55 @@ Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and
     - `project_key` (string): Project key
     - `limit` (number, optional): Results limit (1-50, default: 10)
 
-## Usage with Claude Desktop
+### Custom Fields Support
+
+The Jira integration supports custom fields like Acceptance Criteria. When creating or updating issues:
+
+```json
+// Example: Creating a story with Acceptance Criteria
+{
+  "project_key": "PROJ",
+  "summary": "Implement new feature",
+  "description": "Feature description",
+  "custom_fields": {
+    "Acceptance Criteria": "1. Criteria one\n2. Criteria two\n3. Criteria three"
+  }
+}
+
+// Example: Updating an issue's custom fields
+{
+  "issue_key": "PROJ-123",
+  "fields": {
+    "Acceptance Criteria": "Updated acceptance criteria",
+    "summary": "Updated summary"
+  }
+}
+```
+
+## Configuration
 
 1. Get API tokens from: https://id.atlassian.com/manage-profile/security/api-tokens
 
-2. Add to your `claude_desktop_config.json`:
+2. Create a `.env` file with your credentials:
+
+```bash
+CONFLUENCE_URL=https://your-domain.atlassian.net/wiki
+CONFLUENCE_USERNAME=your.email@domain.com
+CONFLUENCE_API_TOKEN=your_api_token
+
+JIRA_URL=https://your-domain.atlassian.net
+JIRA_USERNAME=your.email@domain.com
+JIRA_API_TOKEN=your_api_token
+```
+
+## Usage with Claude Desktop
+
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "mcp-atlassian": {
+    "mcp-atlassian-ib": {
       "command": "uvx",
       "args": ["mcp-atlassian"],
       "env": {
@@ -97,11 +177,11 @@ Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and
 ```json
 {
   "mcpServers": {
-    "mcp-atlassian": {
+    "mcp-atlassian-ib": {
       "command": "uv",
       "args": [
         "--directory",
-        "/path/to/mcp-atlassian",
+        "/path/to/mcp-atlassian-ib",
         "run",
         "mcp-atlassian"
       ],
@@ -117,7 +197,7 @@ Model Context Protocol (MCP) server for Atlassian Cloud products (Confluence and
   }
 }
 ```
-Replace `/path/to/mcp-atlassian` with the actual path where you've cloned the repository.
+Replace `/path/to/mcp-atlassian-ib` with the actual path where you've cloned the repository.
 </details>
 
 
