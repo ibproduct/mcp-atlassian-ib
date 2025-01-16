@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2] - 2024-01-16
+
+### Fixed
+- Jira issue update implementation
+- Added correct Acceptance Criteria field ID (customfield_11738)
+- Switched to using library's update_issue_field method
+
 ## [0.2.1] - 2024-01-16
 
 ### Fixed
