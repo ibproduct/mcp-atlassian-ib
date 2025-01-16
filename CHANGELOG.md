@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1] - 2024-01-16
+
+### Fixed
+- Jira custom fields handling in issue updates
+- Removed hardcoded custom field IDs
+- Added better logging for custom field operations
+- Improved field ID lookup to handle both names and IDs
+
 ## [0.2.0] - 2024-01-16
 
 ### Added
